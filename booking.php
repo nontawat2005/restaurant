@@ -8,13 +8,12 @@
                     ?></h2>
 
 <form action="save_booking.php" method="POST">
-    <label>เบอร์โทรศัพท์:</label>
-    <input type="text" name="phone" required class="form-control">
+    
 
     <label>จำนวนคน:</label>
     <input type="number" name="people_count" min="1" required class="form-control">
 
-    <input type="datetime-local" name="booking_time" required>
+
     <input type="hidden" name="table_id" value="<?php echo $table_id; ?>">
     ชื่อผู้จอง: <input type="text" name="customer_name" required><br><br>
     อีเมล: <input type="email" name="customer_email" required><br><br>

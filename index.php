@@ -1,12 +1,34 @@
-<?php include 'config.php'; ?>
+<?php
+
+include 'config.php';
+date_default_timezone_set('Asia/Bangkok');
+
+// 1. คำนวณเวลาเส้นตายที่ 1 ชั่วโมง (60 นาที)
+$time_threshold = date('Y-m-d H:i:s', strtotime('-60 minutes'));
+
+// 2. ค้นหาการจองที่เกิน 1 ชั่วโมง
+$check_expired = "SELECT table_id FROM bookings WHERE booking_time <= '$time_threshold'";
+$expired_result = mysqli_query($conn, $check_expired);
+
+if (mysqli_num_rows($expired_result) > 0) {
+    while ($expired_row = mysqli_fetch_assoc($expired_result)) {
+        $t_id = $expired_row['table_id'];
+        // ปรับสถานะโต๊ะกลับเป็นว่าง และลบข้อมูลการจอง
+        mysqli_query($conn, "UPDATE tables SET status = 'available' WHERE id = '$t_id'");
+        mysqli_query($conn, "DELETE FROM bookings WHERE table_id = '$t_id'");
+    }
+}
+?>
+
 <!DOCTYPE html>
-<html lang="th">
+<html lang=" th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบจองโต๊ะอาหาร | Goodfood</title>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
-    
+
     <style>
         :root {
             --primary-gradient: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
@@ -14,48 +36,62 @@
             --bg-color: #f0f2f5;
         }
 
-        body { 
-            font-family: 'Prompt', sans-serif; 
-            background-color: var(--bg-color); 
-            margin: 0; 
-            padding: 40px 20px; 
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 40px 20px;
             text-align: center;
         }
 
-        h1 { color: #2c3e50; margin-bottom: 40px; font-weight: 600; }
-
-        /* ปรับ Container ให้เป็น Grid เพื่อรองรับมือถือ */
-        .table-container { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); 
-            gap: 25px; 
-            max-width: 1000px; 
-            margin: 0 auto; 
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 40px;
+            font-weight: 600;
         }
 
-        .table-box { 
-            height: 180px; 
-            border-radius: 24px; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            color: white; 
-            text-decoration: none; 
+        /* ปรับ Container ให้เป็น Grid เพื่อรองรับมือถือ */
+        .table-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 25px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .table-box {
+            height: 180px;
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-decoration: none;
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
         }
 
         .table-box:hover {
             transform: translateY(-10px);
-            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
         }
 
-        .available { background: var(--primary-gradient); color: #064e3b; }
-        .busy { background: var(--busy-gradient); opacity: 0.9; }
+        .available {
+            background: var(--primary-gradient);
+            color: #064e3b;
+        }
 
-        .table-number { font-size: 2rem; font-weight: 600; }
-        
+        .busy {
+            background: var(--busy-gradient);
+            opacity: 0.9;
+        }
+
+        .table-number {
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
         .status-badge {
             font-size: 0.9rem;
             background: rgba(255, 255, 255, 0.3);
@@ -64,18 +100,28 @@
             margin-top: 5px;
         }
 
-        .time-label { 
-            font-size: 0.75rem; 
-            margin-top: 10px; 
-            background: rgba(0,0,0,0.1); 
-            padding: 4px 8px; 
-            border-radius: 8px; 
+        .time-label {
+            font-size: 0.75rem;
+            margin-top: 10px;
+            background: rgba(0, 0, 0, 0.1);
+            padding: 4px 8px;
+            border-radius: 8px;
         }
 
-        .admin-link { margin-top: 50px; display: block; color: #888; text-decoration: none; font-size: 0.9rem; }
-        .admin-link:hover { color: #333; }
+        .admin-link {
+            margin-top: 50px;
+            display: block;
+            color: #888;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .admin-link:hover {
+            color: #333;
+        }
     </style>
 </head>
+
 <body>
 
     <h1>🍴 โต๊ะอาหาร ร้าน Goodfood</h1>
@@ -93,12 +139,12 @@
             $is_available = ($row['status'] == 'available');
             $class = $is_available ? 'available' : 'busy';
             $status_text = $is_available ? 'ว่าง' : 'จองแล้ว';
-            $link = $is_available ? "booking.php?id=".$row['id'] : "check_time.php?id=".$row['id'];
-            
+            $link = $is_available ? "booking.php?id=" . $row['id'] : "check_time.php?id=" . $row['id'];
+
             echo "<a href='$link' class='table-box $class'>";
             echo "  <div class='table-number'>" . htmlspecialchars($row['table_number']) . "</div>";
             echo "  <div class='status-badge'>$status_text</div>";
-            
+
             if (!$is_available && !empty($row['booking_time'])) {
                 echo "<div class='time-label'>⏰ " . date('H:i', strtotime($row['booking_time'])) . " น.</div>";
             }
@@ -111,4 +157,5 @@
     <a href="admin.php" class="admin-link">⚙️ สำหรับเจ้าหน้าที่ (Admin)</a>
 
 </body>
+
 </html>
