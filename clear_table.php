@@ -1,6 +1,6 @@
 <?php
 session_start();
-include 'config.php';
+include 'includes/config.php';
 // ตรวจสอบสิทธิ์ Admin
 if (!isset($_SESSION['admin'])) { header("Location: login.php"); exit(); }
 
